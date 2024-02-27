@@ -9,10 +9,17 @@ export class UserService {
   async create(data: CreateUserDTO) {
     return this.prisma.user.create({
       data,
-      select: {
-        id: true,
-        name: true,
-        email: true,
+    });
+  }
+
+  async list() {
+    return this.prisma.user.findMany();
+  }
+
+  async show(id: number) {
+    return this.prisma.user.findUnique({
+      where: {
+        id,
       },
     });
   }
