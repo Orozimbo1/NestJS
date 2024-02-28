@@ -8,12 +8,15 @@ import {
   Patch,
   Post,
   Put,
+  // UseInterceptors,
 } from '@nestjs/common';
 import { CreateUserDTO } from './dto/create-users.dto';
 import { UpdatePutUserDTO } from './dto/update-put-users.dto';
 import { UpdatePatchUserDTO } from './dto/update-patch-users.dto';
 import { UserService } from './user.service';
+// import { LogInterceptor } from 'src/interceptors/log.interceptor';
 
+// @UseInterceptors(LogInterceptor)
 @Controller('users')
 export class UserControler {
   constructor(private readonly userService: UserService) {}
