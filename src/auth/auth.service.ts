@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthRegisterDTO } from './dto/auth-register.dto';
 import { UserService } from 'src/user/user.service';
 import * as bcrypt from 'bcrypt';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
+    private readonly mailer: MailerService,
   ) {}
 
   createToken(user: User) {
@@ -96,22 +98,56 @@ export class AuthService {
       throw new UnauthorizedException('Email inexistente.');
     }
 
+    const token = this.jwtService.sign(
+      {
+        id: user.id,
+      },
+      {
+        expiresIn: '30 minutes',
+        subject: String(user.id),
+        issuer: 'forget',
+        audience: 'users',
+      },
+    );
+
+    await this.mailer.sendMail({
+      subject: 'Recuperação de Senha.',
+      to: user.email,
+      template: 'forget',
+      context: {
+        name: user.name,
+        token: token,
+      },
+    });
+
     return true;
   }
 
   async reset(password: string, token: string) {
-    // Validar Token
-    const id = 0;
+    try {
+      const data: any = this.jwtService.verify(token, {
+        issuer: 'forget',
+        audience: 'users',
+      });
 
-    const user = await this.prisma.user.update({
-      where: {
-        id,
-      },
-      data: {
-        password,
-      },
-    });
+      if (isNaN(Number(data.id))) {
+        return new BadRequestException('Token inválido.');
+      }
 
-    return this.createToken(user);
+      password = await bcrypt.hash(data.password, await bcrypt.genSalt());
+
+      const user = await this.prisma.user.update({
+        where: {
+          id: Number(data.id),
+        },
+        data: {
+          password,
+        },
+      });
+
+      return this.createToken(user);
+    } catch (error) {
+      return new BadRequestException(error);
+    }
   }
 }
